@@ -1,10 +1,12 @@
-package sr.cliphist.dao;
+package sr.cliphist;
 
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.io.IOException;
+
+import sr.cliphist.dao.ClipDAO;
 
 public class ClipboardMonitor {
 
