@@ -29,7 +29,7 @@ public class ClipboardHistoryManager {
 
     new JFrame() {
       {
-        setVisible(true);
+
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         setBounds(200, 200, 400, 600);
@@ -53,7 +53,7 @@ public class ClipboardHistoryManager {
           {
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-            setVisible(true);
+
             // setBounds(0, 0, 100, 100);
             add(new JTextField("Search") {
               {
@@ -86,9 +86,12 @@ public class ClipboardHistoryManager {
               }
             });
 
+
           }
 
         });
+
+        setVisible(true);
 
       }
 
