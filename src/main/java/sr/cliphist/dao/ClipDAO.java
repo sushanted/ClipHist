@@ -16,7 +16,7 @@ public class ClipDAO {
 
   public static void main(String[] args) {
     //new ClipDAO().insertClip("tester");
-    new ClipDAO().getRecentClips(10).forEach(System.out::println);
+    new ClipDAO().getRecentClips(10,10).forEach(System.out::println);
   }
 
   Connection con = ConnectionManager.INSTANCE.getConnection();
@@ -47,13 +47,13 @@ public class ClipDAO {
     }
   }
 
-  public List<String> getRecentClips(int n) {
+  public List<String> getRecentClips(int page,int pageSize) {
     try {
       Statement stmt = con.createStatement();
 
       // TODO better have a prepared statement
       ResultSet results = stmt
-          .executeQuery(String.format("select clip from clips order by lastAccessed desc limit %d", n));
+          .executeQuery(String.format("select clip from clips order by lastAccessed desc limit %d,%d",page*pageSize ,pageSize));
 
       return Optional.ofNullable(results).map(this::getClips).orElse(Collections.emptyList());
 

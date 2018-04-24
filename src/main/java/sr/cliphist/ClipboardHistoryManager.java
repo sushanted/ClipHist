@@ -1,7 +1,6 @@
 package sr.cliphist;
 
 import java.awt.Dimension;
-import java.awt.GridBagLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -12,12 +11,9 @@ import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.SpringLayout;
 
 import sr.cliphist.dao.ClipDAO;
 
@@ -75,7 +71,7 @@ public class ClipboardHistoryManager {
                 // setBounds(0, 31, 300, 100);
                 setModel(new DefaultListModel<String>() {
                   {
-                    clipDAO.getRecentClips(30).forEach(this::addElement);
+                    clipDAO.getRecentClips(0,30).forEach(this::addElement);
                   }
                 });
                 addMouseListener(new ListListener());
