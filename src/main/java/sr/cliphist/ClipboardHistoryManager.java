@@ -6,6 +6,9 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -14,8 +17,12 @@ import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.BadLocationException;
 
 import sr.cliphist.dao.ClipDAO;
+import sr.cliphist.models.Clips;
 
 public class ClipboardHistoryManager {
   public static void main(String[] args) {
@@ -23,6 +30,8 @@ public class ClipboardHistoryManager {
   }
 
   private ClipDAO clipDAO = new ClipDAO();
+
+  private AtomicReference<Consumer<List<String>>> clipsConsumer = new AtomicReference<Consumer<List<String>>>();
 
   @SuppressWarnings("serial")
   public void showHistory() {
@@ -34,49 +43,37 @@ public class ClipboardHistoryManager {
 
         setBounds(200, 200, 400, 600);
 
-        /*add(new JLabel("Hello") {
-          {
-            setVisible(true);
-          }
-
-        });
-
-        add(new JTextField("Search") {
-          {
-            //setBounds(200, 200, 400, 600);
-            setVisible(true);
-            setText("type regex");
-          }
-        });*/
+        setTitle("cliphist");
 
         add(new JPanel() {
           {
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-
-            // setBounds(0, 0, 100, 100);
             add(new JTextField("Search") {
               {
-                //setBounds(200, 200, 400, 600);
-                setVisible(true);
                 setMaximumSize(new Dimension(1000, 20));
+                this.getDocument().addDocumentListener(new SearchListener(clipsConsumer));
               }
             });
-
 
             add(new JList<String>() {
               {
                 setVisible(true);
-                //setBounds(200, 200, 400, 600);
-                // setBounds(0, 31, 300, 100);
-                setModel(new DefaultListModel<String>() {
-                  {
-                    clipDAO.getRecentClips(0,30).forEach(this::addElement);
-                  }
+
+                clipsConsumer.set(clips -> {
+
+                  setModel(new DefaultListModel<String>() {
+                    {
+                      clips.forEach(this::addElement);
+                    }
+                  });
+
                 });
+
                 addMouseListener(new ListListener());
               }
             });
+
 
 
             add(new JPanel() {
@@ -85,8 +82,6 @@ public class ClipboardHistoryManager {
                 add(new JButton(">"));
               }
             });
-
-
           }
 
         });
@@ -97,9 +92,11 @@ public class ClipboardHistoryManager {
 
     };
 
+    clipsConsumer.get().accept(clipDAO.getRecentClips(0, 30));
+
   }
 
-  private static class ListListener extends MouseAdapter {
+  private class ListListener extends MouseAdapter {
 
     @Override
     public void mouseClicked(MouseEvent e) {
@@ -110,7 +107,46 @@ public class ClipboardHistoryManager {
       Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
       StringSelection clipboardTarget = new StringSelection(selectedValue);
       clipboard.setContents(clipboardTarget, clipboardTarget);
-      System.exit(0);
+      //System.exit(0);
     }
+  }
+
+  private class SearchListener implements DocumentListener {
+
+    private AtomicReference<Consumer<List<String>>> clipConsumerReference;
+
+    public SearchListener(AtomicReference<Consumer<List<String>>> clipConsumerReference) {
+      this.clipConsumerReference = clipConsumerReference;
+    }
+
+    @Override
+    public void insertUpdate(DocumentEvent e) {
+      process(e);
+    }
+
+    private void process(DocumentEvent e) {
+      try {
+        String searchText = e.getDocument().getText(0, e.getDocument().getLength());
+        System.out.println(searchText);
+
+        //TODO make these constants
+        clipConsumerReference.get().accept(clipDAO.getRecentClips(searchText, 0, 30));
+
+      } catch (BadLocationException e1) {
+        e1.printStackTrace();
+      }
+
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+      process(e);
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+      process(e);
+    }
+
   }
 }
