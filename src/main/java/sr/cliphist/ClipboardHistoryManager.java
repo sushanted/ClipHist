@@ -11,6 +11,7 @@ import java.awt.event.MouseMotionAdapter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 import javax.swing.BoxLayout;
 import javax.swing.DefaultListModel;
@@ -37,6 +38,8 @@ public class ClipboardHistoryManager {
   private AtomicReference<Consumer<List<String>>> clipsConsumer = new AtomicReference<Consumer<List<String>>>();
 
   private Frame frame;
+
+  private String searchString;
 
   @SuppressWarnings("serial")
   public void showHistory() {
@@ -80,22 +83,7 @@ public class ClipboardHistoryManager {
                 addMouseMotionListener(newToolTipShower());
               }
 
-              private MouseMotionAdapter newToolTipShower() {
-                return new MouseMotionAdapter() {
-                  @Override
-                  public void mouseMoved(MouseEvent e) {
-                      JList l = (JList)e.getSource();
-                      ListModel m = l.getModel();
-                      int index = l.locationToIndex(e.getPoint());
-                      if( index>-1 ) {
-                          l.setToolTipText("<html><pre>"+m.getElementAt(index).toString()+"</pre></html>");
-                      }
-                  }
-              };
-              }
             });
-
-
 
             add(new JPanel() {
               {
@@ -130,7 +118,7 @@ public class ClipboardHistoryManager {
       clipboard.setContents(clipboardTarget, clipboardTarget);
 
       frame.setState(Frame.ICONIFIED);
-      //System.exit(0);
+      // System.exit(0);
     }
   }
 
@@ -149,11 +137,11 @@ public class ClipboardHistoryManager {
 
     private void process(DocumentEvent e) {
       try {
-        String searchText = e.getDocument().getText(0, e.getDocument().getLength());
-        System.out.println(searchText);
+        searchString = e.getDocument().getText(0, e.getDocument().getLength());
+        System.out.println(searchString);
 
-        //TODO make these constants
-        clipConsumerReference.get().accept(clipDAO.getRecentClips(searchText, 0, 30));
+        // TODO make these constants
+        clipConsumerReference.get().accept(clipDAO.getRecentClips(searchString, 0, 30));
 
       } catch (BadLocationException e1) {
         e1.printStackTrace();
@@ -171,5 +159,28 @@ public class ClipboardHistoryManager {
       process(e);
     }
 
+  }
+
+  private MouseMotionAdapter newToolTipShower() {
+    return new MouseMotionAdapter() {
+      @Override
+      public void mouseMoved(MouseEvent e) {
+        JList<String> l = (JList<String>) e.getSource();
+        ListModel m = l.getModel();
+        int index = l.locationToIndex(e.getPoint());
+        if (index > -1) {
+          l.setToolTipText(format(m.getElementAt(index).toString()));
+        }
+      }
+    };
+  }
+
+  private String format(String content) {
+    if (searchString != null && !searchString.isEmpty()) {
+      content = content.replaceAll("(?i)(" + Pattern.quote(searchString)+")",
+          "<font color='green'><b>$1</b></font>");
+    }
+
+    return "<html><pre>" + content + "</pre></html>";
   }
 }
