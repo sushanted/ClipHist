@@ -1,11 +1,13 @@
 package sr.cliphist;
 
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -17,6 +19,7 @@ import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.ListModel;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
@@ -33,10 +36,12 @@ public class ClipboardHistoryManager {
 
   private AtomicReference<Consumer<List<String>>> clipsConsumer = new AtomicReference<Consumer<List<String>>>();
 
+  private Frame frame;
+
   @SuppressWarnings("serial")
   public void showHistory() {
 
-    new JFrame() {
+    frame = new JFrame() {
       {
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -71,6 +76,22 @@ public class ClipboardHistoryManager {
                 });
 
                 addMouseListener(new ListListener());
+
+                addMouseMotionListener(newToolTipShower());
+              }
+
+              private MouseMotionAdapter newToolTipShower() {
+                return new MouseMotionAdapter() {
+                  @Override
+                  public void mouseMoved(MouseEvent e) {
+                      JList l = (JList)e.getSource();
+                      ListModel m = l.getModel();
+                      int index = l.locationToIndex(e.getPoint());
+                      if( index>-1 ) {
+                          l.setToolTipText("<html><pre>"+m.getElementAt(index).toString()+"</pre></html>");
+                      }
+                  }
+              };
               }
             });
 
@@ -107,6 +128,8 @@ public class ClipboardHistoryManager {
       Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
       StringSelection clipboardTarget = new StringSelection(selectedValue);
       clipboard.setContents(clipboardTarget, clipboardTarget);
+
+      frame.setState(Frame.ICONIFIED);
       //System.exit(0);
     }
   }
