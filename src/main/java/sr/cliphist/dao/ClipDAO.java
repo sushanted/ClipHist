@@ -25,6 +25,7 @@ public class ClipDAO {
     // no : insert the clip
 
     clip = clip.replace("'", "''");
+    clip = clip.replace("\\", "\\\\");
 
     try {
       Statement stmt = con.createStatement();

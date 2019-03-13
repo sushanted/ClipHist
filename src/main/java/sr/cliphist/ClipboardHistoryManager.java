@@ -26,16 +26,15 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 
 import sr.cliphist.dao.ClipDAO;
-import sr.cliphist.models.Clips;
 
 public class ClipboardHistoryManager {
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     new ClipboardHistoryManager().showHistory();
   }
 
-  private ClipDAO clipDAO = new ClipDAO();
+  private final ClipDAO clipDAO = new ClipDAO();
 
-  private AtomicReference<Consumer<List<String>>> clipsConsumer = new AtomicReference<Consumer<List<String>>>();
+  private final AtomicReference<Consumer<List<String>>> clipsConsumer = new AtomicReference<>();
 
   private Frame frame;
 
@@ -44,7 +43,7 @@ public class ClipboardHistoryManager {
   @SuppressWarnings("serial")
   public void showHistory() {
 
-    frame = new JFrame() {
+    this.frame = new JFrame() {
       {
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -60,7 +59,7 @@ public class ClipboardHistoryManager {
             add(new JTextField("Search") {
               {
                 setMaximumSize(new Dimension(1000, 20));
-                this.getDocument().addDocumentListener(new SearchListener(clipsConsumer));
+                this.getDocument().addDocumentListener(new SearchListener(ClipboardHistoryManager.this.clipsConsumer));
               }
             });
 
@@ -68,7 +67,7 @@ public class ClipboardHistoryManager {
               {
                 setVisible(true);
 
-                clipsConsumer.set(clips -> {
+                ClipboardHistoryManager.this.clipsConsumer.set(clips -> {
 
                   setModel(new DefaultListModel<String>() {
                     {
@@ -101,61 +100,73 @@ public class ClipboardHistoryManager {
 
     };
 
-    clipsConsumer.get().accept(clipDAO.getRecentClips(0, 30));
+    this.clipsConsumer.get().accept(this.clipDAO.getRecentClips(0, 30));
 
+    startClipboardMonitor();
+
+  }
+
+  private void startClipboardMonitor() {
+    new Thread(() -> {
+      try {
+        new ClipboardMonitor().readAndSave();
+      } catch (final Exception e) {
+        e.printStackTrace();
+      }
+    }).start();
   }
 
   private class ListListener extends MouseAdapter {
 
     @Override
-    public void mouseClicked(MouseEvent e) {
+    public void mouseClicked(final MouseEvent e) {
       System.out.println("Clicked:" + e.getClickCount());
-      JList list = (JList) e.getSource();
-      String selectedValue = (String) list.getModel().getElementAt(list.locationToIndex(e.getPoint()));
+      final JList list = (JList) e.getSource();
+      final String selectedValue = (String) list.getModel().getElementAt(list.locationToIndex(e.getPoint()));
       System.out.println(selectedValue);
-      Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-      StringSelection clipboardTarget = new StringSelection(selectedValue);
+      final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+      final StringSelection clipboardTarget = new StringSelection(selectedValue);
       clipboard.setContents(clipboardTarget, clipboardTarget);
 
-      frame.setState(Frame.ICONIFIED);
+      ClipboardHistoryManager.this.frame.setState(Frame.ICONIFIED);
       // System.exit(0);
     }
   }
 
   private class SearchListener implements DocumentListener {
 
-    private AtomicReference<Consumer<List<String>>> clipConsumerReference;
+    private final AtomicReference<Consumer<List<String>>> clipConsumerReference;
 
-    public SearchListener(AtomicReference<Consumer<List<String>>> clipConsumerReference) {
+    public SearchListener(final AtomicReference<Consumer<List<String>>> clipConsumerReference) {
       this.clipConsumerReference = clipConsumerReference;
     }
 
     @Override
-    public void insertUpdate(DocumentEvent e) {
+    public void insertUpdate(final DocumentEvent e) {
       process(e);
     }
 
-    private void process(DocumentEvent e) {
+    private void process(final DocumentEvent e) {
       try {
-        searchString = e.getDocument().getText(0, e.getDocument().getLength());
-        System.out.println(searchString);
+        ClipboardHistoryManager.this.searchString = e.getDocument().getText(0, e.getDocument().getLength());
+        System.out.println(ClipboardHistoryManager.this.searchString);
 
         // TODO make these constants
-        clipConsumerReference.get().accept(clipDAO.getRecentClips(searchString, 0, 30));
+        this.clipConsumerReference.get().accept(ClipboardHistoryManager.this.clipDAO.getRecentClips(ClipboardHistoryManager.this.searchString, 0, 30));
 
-      } catch (BadLocationException e1) {
+      } catch (final BadLocationException e1) {
         e1.printStackTrace();
       }
 
     }
 
     @Override
-    public void removeUpdate(DocumentEvent e) {
+    public void removeUpdate(final DocumentEvent e) {
       process(e);
     }
 
     @Override
-    public void changedUpdate(DocumentEvent e) {
+    public void changedUpdate(final DocumentEvent e) {
       process(e);
     }
 
@@ -164,10 +175,10 @@ public class ClipboardHistoryManager {
   private MouseMotionAdapter newToolTipShower() {
     return new MouseMotionAdapter() {
       @Override
-      public void mouseMoved(MouseEvent e) {
-        JList<String> l = (JList<String>) e.getSource();
-        ListModel m = l.getModel();
-        int index = l.locationToIndex(e.getPoint());
+      public void mouseMoved(final MouseEvent e) {
+        final JList<String> l = (JList<String>) e.getSource();
+        final ListModel m = l.getModel();
+        final int index = l.locationToIndex(e.getPoint());
         if (index > -1) {
           l.setToolTipText(format(m.getElementAt(index).toString()));
         }
@@ -176,9 +187,11 @@ public class ClipboardHistoryManager {
   }
 
   private String format(String content) {
-    if (searchString != null && !searchString.isEmpty()) {
-      content = content.replaceAll("(?i)(" + Pattern.quote(searchString)+")",
-          "<font color='green'><b>$1</b></font>");
+
+    // System.out.println(content);
+
+    if (this.searchString != null && !this.searchString.isEmpty()) {
+      content = content.replaceAll("(?i)(" + Pattern.quote(this.searchString) + ")", "<font color='green'><b>$1</b></font>");
     }
 
     return "<html><pre>" + content + "</pre></html>";

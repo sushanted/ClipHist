@@ -12,27 +12,27 @@ public class ClipboardMonitor {
 
   // TODO easy GUI to access last clips
   // TODO run as a service, so it will get restarted if somehow got terminated
-  public static void main(String[] args) throws Exception {
+  public static void main(final String[] args) throws Exception {
     new ClipboardMonitor().readAndSave();
   }
 
-  private ClipDAO clipDAO = new ClipDAO();
+  private final ClipDAO clipDAO = new ClipDAO();
 
-  private void readAndSave() throws UnsupportedFlavorException, IOException, InterruptedException {
-    Clipboard sysClip = Toolkit.getDefaultToolkit().getSystemClipboard();
+  public void readAndSave() throws UnsupportedFlavorException, IOException, InterruptedException {
+    final Clipboard sysClip = Toolkit.getDefaultToolkit().getSystemClipboard();
 
     Object last = null;
 
     while (true) {
       try {
-        Object data = sysClip.getData(DataFlavor.stringFlavor);
+        final Object data = sysClip.getData(DataFlavor.stringFlavor);
         if (!data.equals(last)) {
-          clipDAO.insertClip(String.valueOf(data));
+          this.clipDAO.insertClip(String.valueOf(data));
           System.out.println(data);
           last = data;
         }
         Thread.sleep(1000);
-      } catch (Exception e) {
+      } catch (final Exception e) {
         e.printStackTrace();
       }
     }
