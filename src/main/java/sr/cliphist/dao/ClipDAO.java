@@ -12,7 +12,7 @@ public class ClipDAO {
 
   // TODO create indexes for required columns
 
-  public static void main(String[] args) {
+  public static void main(final String[] args) {
     // new ClipDAO().insertClip("tester");
     new ClipDAO().getRecentClips("admin",0, 10).forEach(System.out::println);
   }
@@ -28,10 +28,10 @@ public class ClipDAO {
     clip = clip.replace("\\", "\\\\");
 
     try {
-      Statement stmt = con.createStatement();
+      final Statement stmt = this.con.createStatement();
 
       // TODO better have a prepared statement
-      int count = stmt
+      final int count = stmt
           .executeUpdate(String.format("update clips set frequency = frequency + 1,lastAccessed = %d where clip = '%s'",
               System.currentTimeMillis(), clip));
 
@@ -41,14 +41,17 @@ public class ClipDAO {
 
       stmt.close();
 
-    } catch (Exception e) {
+    } catch (final Exception e) {
       e.printStackTrace();
+      System.out.println("Reconnecting to db...");
+      this.con = ConnectionManager.INSTANCE.getConnection();
     }
   }
 
-  public List<String> getRecentClips(String search, int page, int pageSize) {
-
-    String format = String.format("select clip from clips where clip like '%%%s%%' order by lastAccessed desc limit %d,%d", search,
+  public List<String> getRecentClips(final String search, final int page, final int pageSize) {
+    
+	 //TODO Avoid script injection here
+    final String format = String.format("select clip from clips where clip like '%%%s%%' order by lastAccessed desc limit %d,%d", search,
         page * pageSize, pageSize);
 
     System.out.println(format);
@@ -57,38 +60,42 @@ public class ClipDAO {
         format);
   }
 
-  public List<String> getRecentClips(int page, int pageSize) {
+  public List<String> getRecentClips(final int page, final int pageSize) {
     return getQueryResults(
         String.format("select clip from clips order by lastAccessed desc limit %d,%d", page * pageSize, pageSize));
   }
 
-  private List<String> getQueryResults(String query) {
+  private List<String> getQueryResults(final String query) {
     try {
-      Statement stmt = con.createStatement();
+      final Statement stmt = this.con.createStatement();
 
       // TODO better have a prepared statement
-      ResultSet results = stmt.executeQuery(query);
+      final ResultSet results = stmt.executeQuery(query);
 
       return Optional.ofNullable(results).map(this::getClips).orElse(Collections.emptyList());
 
-    } catch (Exception e) {
+    } catch (final Exception e) {
       e.printStackTrace();
+      System.out.println("Reconnecting to db...");
+      this.con = ConnectionManager.INSTANCE.getConnection();
     }
 
     return Collections.emptyList();
   }
 
-  private List<String> getClips(ResultSet r) {
+  private List<String> getClips(final ResultSet r) {
 
-    List<String> clips = new ArrayList<>();
+    final List<String> clips = new ArrayList<>();
 
     try {
       while (r.next()) {
         clips.add(r.getString("clip"));
       }
 
-    } catch (Exception e) {
+    } catch (final Exception e) {
       e.printStackTrace();
+      System.out.println("Reconnecting to db...");
+      this.con = ConnectionManager.INSTANCE.getConnection();
     }
 
     return clips;

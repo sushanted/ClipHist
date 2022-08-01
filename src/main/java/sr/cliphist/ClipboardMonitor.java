@@ -31,10 +31,11 @@ public class ClipboardMonitor {
           System.out.println(data);
           last = data;
         }
-        Thread.sleep(1000);
+
       } catch (final Exception e) {
         e.printStackTrace();
       }
+      Thread.sleep(1000);
     }
   }
 

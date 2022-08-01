@@ -1,0 +1,6 @@
+Externalize DataSource params (connection_string, username,password)
+Scroll multiple pages in search
+DB creation script : flyway?
+Display last accessed time in UI as an optional column
+idea: can we used H2 file based DB instead of external DB? spring.datasource.url=jdbc:h2:file:/data/demo
+	With this approach we'll need only a file as input to start the CHM

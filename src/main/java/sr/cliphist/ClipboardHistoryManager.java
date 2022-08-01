@@ -2,6 +2,7 @@ package sr.cliphist;
 
 import java.awt.Dimension;
 import java.awt.Frame;
+import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -26,174 +27,188 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 
 import sr.cliphist.dao.ClipDAO;
+import sr.cliphist.transform.Transformation;
+import sr.cliphist.transform.Transformer;
 
 public class ClipboardHistoryManager {
-  public static void main(final String[] args) {
-    new ClipboardHistoryManager().showHistory();
-  }
+	public static void main(final String[] args) {
+		new ClipboardHistoryManager().showHistory();
+	}
 
-  private final ClipDAO clipDAO = new ClipDAO();
+	private final ClipDAO clipDAO = new ClipDAO();
 
-  private final AtomicReference<Consumer<List<String>>> clipsConsumer = new AtomicReference<>();
+	private final AtomicReference<Consumer<List<String>>> clipsConsumer = new AtomicReference<>();
 
-  private Frame frame;
+	private Frame frame;
 
-  private String searchString;
+	private String searchString;
 
-  @SuppressWarnings("serial")
-  public void showHistory() {
+	@SuppressWarnings("serial")
+	public void showHistory() {
 
-    this.frame = new JFrame() {
-      {
+		this.frame = new JFrame() {
+			{
 
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+				setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        setBounds(200, 200, 400, 600);
+				setBounds(200, 200, 400, 700);
 
-        setTitle("cliphist");
+				setTitle("cliphist");
 
-        add(new JPanel() {
-          {
-            setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+				add(new JPanel() {
+					{
+						setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
-            add(new JTextField("Search") {
-              {
-                setMaximumSize(new Dimension(1000, 20));
-                this.getDocument().addDocumentListener(new SearchListener(ClipboardHistoryManager.this.clipsConsumer));
-              }
-            });
+						add(new JTextField("Search") {
+							{
+								setMaximumSize(new Dimension(1000, 20));
+								this.getDocument().addDocumentListener(
+										new SearchListener(ClipboardHistoryManager.this.clipsConsumer));
+							}
+						});
 
-            add(new JList<String>() {
-              {
-                setVisible(true);
+						add(new JList<String>() {
+							{
+								setVisible(true);
 
-                ClipboardHistoryManager.this.clipsConsumer.set(clips -> {
+								ClipboardHistoryManager.this.clipsConsumer.set(clips -> {
 
-                  setModel(new DefaultListModel<String>() {
-                    {
-                      clips.forEach(this::addElement);
-                    }
-                  });
+									setModel(new DefaultListModel<String>() {
+										{
+											clips.forEach(this::addElement);
+										}
+									});
 
-                });
+								});
 
-                addMouseListener(new ListListener());
+								addMouseListener(new ListListener());
 
-                addMouseMotionListener(newToolTipShower());
-              }
+								addMouseMotionListener(newToolTipShower());
+							}
 
-            });
+						});
 
-            add(new JPanel() {
-              {
-                add(new JButton("<"));
-                add(new JButton(">"));
-              }
-            });
-          }
+						add(new JPanel() {
+							{
 
-        });
+								setLayout(new GridLayout(Transformation.values().length/5 + 1,5));
 
-        setVisible(true);
+								for (Transformation transformation : Transformation.values()) {
+									add(new JButton(transformation.getCaption()) {
+										{
+											addActionListener(e -> new Transformer().transform(transformation));
+										}
+									});
+								}
 
-      }
+							}
+						});
+					}
 
-    };
+				});
 
-    this.clipsConsumer.get().accept(this.clipDAO.getRecentClips(0, 30));
+				setVisible(true);
 
-    startClipboardMonitor();
+			}
 
-  }
+		};
 
-  private void startClipboardMonitor() {
-    new Thread(() -> {
-      try {
-        new ClipboardMonitor().readAndSave();
-      } catch (final Exception e) {
-        e.printStackTrace();
-      }
-    }).start();
-  }
+		this.clipsConsumer.get().accept(this.clipDAO.getRecentClips(0, 30));
 
-  private class ListListener extends MouseAdapter {
+		startClipboardMonitor();
 
-    @Override
-    public void mouseClicked(final MouseEvent e) {
-      System.out.println("Clicked:" + e.getClickCount());
-      final JList list = (JList) e.getSource();
-      final String selectedValue = (String) list.getModel().getElementAt(list.locationToIndex(e.getPoint()));
-      System.out.println(selectedValue);
-      final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
-      final StringSelection clipboardTarget = new StringSelection(selectedValue);
-      clipboard.setContents(clipboardTarget, clipboardTarget);
+	}
 
-      ClipboardHistoryManager.this.frame.setState(Frame.ICONIFIED);
-      // System.exit(0);
-    }
-  }
+	private void startClipboardMonitor() {
+		new Thread(() -> {
+			try {
+				new ClipboardMonitor().readAndSave();
+			} catch (final Exception e) {
+				e.printStackTrace();
+			}
+		}).start();
+	}
 
-  private class SearchListener implements DocumentListener {
+	private class ListListener extends MouseAdapter {
 
-    private final AtomicReference<Consumer<List<String>>> clipConsumerReference;
+		@Override
+		public void mouseClicked(final MouseEvent e) {
+			System.out.println("Clicked:" + e.getClickCount());
+			final JList list = (JList) e.getSource();
+			final String selectedValue = (String) list.getModel().getElementAt(list.locationToIndex(e.getPoint()));
+			System.out.println(selectedValue);
+			final Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+			final StringSelection clipboardTarget = new StringSelection(selectedValue);
+			clipboard.setContents(clipboardTarget, clipboardTarget);
 
-    public SearchListener(final AtomicReference<Consumer<List<String>>> clipConsumerReference) {
-      this.clipConsumerReference = clipConsumerReference;
-    }
+			ClipboardHistoryManager.this.frame.setState(Frame.ICONIFIED);
+			// System.exit(0);
+		}
+	}
 
-    @Override
-    public void insertUpdate(final DocumentEvent e) {
-      process(e);
-    }
+	private class SearchListener implements DocumentListener {
 
-    private void process(final DocumentEvent e) {
-      try {
-        ClipboardHistoryManager.this.searchString = e.getDocument().getText(0, e.getDocument().getLength());
-        System.out.println(ClipboardHistoryManager.this.searchString);
+		private final AtomicReference<Consumer<List<String>>> clipConsumerReference;
 
-        // TODO make these constants
-        this.clipConsumerReference.get().accept(ClipboardHistoryManager.this.clipDAO.getRecentClips(ClipboardHistoryManager.this.searchString, 0, 30));
+		public SearchListener(final AtomicReference<Consumer<List<String>>> clipConsumerReference) {
+			this.clipConsumerReference = clipConsumerReference;
+		}
 
-      } catch (final BadLocationException e1) {
-        e1.printStackTrace();
-      }
+		@Override
+		public void insertUpdate(final DocumentEvent e) {
+			process(e);
+		}
 
-    }
+		private void process(final DocumentEvent e) {
+			try {
+				ClipboardHistoryManager.this.searchString = e.getDocument().getText(0, e.getDocument().getLength());
+				System.out.println(ClipboardHistoryManager.this.searchString);
 
-    @Override
-    public void removeUpdate(final DocumentEvent e) {
-      process(e);
-    }
+				// TODO make these constants
+				this.clipConsumerReference.get().accept(ClipboardHistoryManager.this.clipDAO
+						.getRecentClips(ClipboardHistoryManager.this.searchString, 0, 30));
 
-    @Override
-    public void changedUpdate(final DocumentEvent e) {
-      process(e);
-    }
+			} catch (final BadLocationException e1) {
+				e1.printStackTrace();
+			}
 
-  }
+		}
 
-  private MouseMotionAdapter newToolTipShower() {
-    return new MouseMotionAdapter() {
-      @Override
-      public void mouseMoved(final MouseEvent e) {
-        final JList<String> l = (JList<String>) e.getSource();
-        final ListModel m = l.getModel();
-        final int index = l.locationToIndex(e.getPoint());
-        if (index > -1) {
-          l.setToolTipText(format(m.getElementAt(index).toString()));
-        }
-      }
-    };
-  }
+		@Override
+		public void removeUpdate(final DocumentEvent e) {
+			process(e);
+		}
 
-  private String format(String content) {
+		@Override
+		public void changedUpdate(final DocumentEvent e) {
+			process(e);
+		}
 
-    // System.out.println(content);
+	}
 
-    if (this.searchString != null && !this.searchString.isEmpty()) {
-      content = content.replaceAll("(?i)(" + Pattern.quote(this.searchString) + ")", "<font color='green'><b>$1</b></font>");
-    }
+	private MouseMotionAdapter newToolTipShower() {
+		return new MouseMotionAdapter() {
+			@Override
+			public void mouseMoved(final MouseEvent e) {
+				final JList<String> l = (JList<String>) e.getSource();
+				final ListModel m = l.getModel();
+				final int index = l.locationToIndex(e.getPoint());
+				if (index > -1) {
+					l.setToolTipText(format(m.getElementAt(index).toString()));
+				}
+			}
+		};
+	}
 
-    return "<html><pre>" + content + "</pre></html>";
-  }
+	private String format(String content) {
+
+		// System.out.println(content);
+
+		if (this.searchString != null && !this.searchString.isEmpty()) {
+			content = content.replaceAll("(?i)(" + Pattern.quote(this.searchString) + ")",
+					"<font color='green'><b>$1</b></font>");
+		}
+
+		return "<html><pre>" + content + "</pre></html>";
+	}
 }
