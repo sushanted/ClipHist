@@ -27,7 +27,9 @@ public enum Transformation {
 	PrettyJson ("PJson",new JsonTransformer()::prettyJson),
 	Sha256 ("Sha256", (DigestUtils::sha256Hex)),
 	Sha256_10 ("Sha256/10", str -> DigestUtils.sha256Hex(str).substring(0,10)),
-	
+	Fraction("/",new LatexTransformer()::fraction),
+	Matrix("[]",new LatexTransformer()::matrixExpr),
+
 	;
 	
 	private String caption;
